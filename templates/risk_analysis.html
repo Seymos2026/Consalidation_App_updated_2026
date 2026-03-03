@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Risk Analysis Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .separator-row td {
+            padding: 0;
+        }
+        
+        /* Static highlight colors for groups */
+        .group-color-0 { background-color: #ffecb3; }
+        .group-color-1 { background-color: #e1f5fe; }
+        .group-color-2 { background-color: #e8f5e9; }
+        .group-color-3 { background-color: #f3e5f5; }
+        .group-color-4 { background-color: #fff8e1; }
+        .group-color-5 { background-color: #e0f7fa; }
+        .group-color-6 { background-color: #f1f8e9; }
+        .group-color-7 { background-color: #fce4ec; }
+        .group-color-8 { background-color: #ede7f6; }
+        .group-color-9 { background-color: #e0f2f1; }
+        
+        /* Add a light background for single failure rows */
+        .single-failure {
+            background-color: #f5f5f5;
+        }
+        
+        /* Legend item styles */
+        .legend {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .legend-item {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 3px;
+        }
+        
+        .filter-controls {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        select, button {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-right: 10px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Risk Analysis Results</h1>
+    
+    <div class="filter-controls">
+        <label for="majorFilter">Filter by Major:</label>
+        <select id="majorFilter">
+            <option value="">All</option>
+            <option value="EE">EE</option>
+            <option value="CyS">CyS</option>
+            <option value="CNET">CNET</option>
+            <option value="SD">SD</option>
+            <option value="CS">CS</option>
+            <option value="AI">AI</option>
+            <option value="MAI">MAI</option>
+            <option value="PEE">PEE</option>
+            <option value="nan">nan</option>
+        </select>
+        
+        <label for="riskFilter">Risk Level:</label>
+        <select id="riskFilter">
+            <option value="">All</option>
+            <option value="at-risk">At Risk (Multiple Failures)</option>
+            <option value="single">Single Failure</option>
+        </select>
+        
+        <button id="resetBtn">Reset Filters</button>
+    </div>
+    
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Grade</th>
+                <th>Major</th>
+                <th>Status</th>
+                <th>Advisor</th>
+                <th>Instructor</th>
+                <th>Risk Level</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students_at_risk %}
+                <tr data-major="{{ student['Major'] }}">
+                    <td>{{ student['ID'] }}</td>
+                    <td>{{ student['Name'] }}</td>
+                    <td>{{ student['Course'] }}</td>
+                    <td>{{ student['Grade'] }}</td>
+                    <td>{{ student['Major'] }}</td>
+                    <td>{{ student['Status'] }}</td>
+                    <td>{{ student['Advisor'] }}</td>
+                    <td>{{ student.get('Instructor', 'N/A') }}</td>
+                    <td class="risk-level"></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="legend" id="dynamicLegend">
+        <h3>Legend: Students With Multiple Failures</h3>
+        <!-- Legend items will be added dynamically -->
+    </div>
+
+    <script>
+        window.onload = function() {
+            var table = document.getElementById('resultsTable');
+            var rows = Array.from(table.getElementsByTagName('tr')).slice(1); // Exclude header row
+            var legend = document.getElementById('dynamicLegend');
+
+            // Sort rows by ID column first
+            rows.sort((a, b) => {
+                var idA = parseInt(a.cells[0].textContent);
+                var idB = parseInt(b.cells[0].textContent);
+                return idA - idB;
+            });
+
+            // Count occurrences of each ID and build a map of IDs to their count
+            var idCounts = {};
+            rows.forEach(row => {
+                var id = row.cells[0].textContent;
+                idCounts[id] = (idCounts[id] || 0) + 1;
+            });
+
+            // Create a map to assign a unique color index to each ID with multiple occurrences
+            var idColorMap = {};
+            var colorIndex = 0;
+            
+            for (var id in idCounts) {
+                if (idCounts[id] > 1) {
+                    idColorMap[id] = colorIndex % 10; // Use modulo to stay within our 10 defined colors
+                    colorIndex++;
+                }
+            }
+
+            // Create a new array to store rows grouped by ID
+            var groupedRows = [];
+            var currentId = null;
+            var isFirstStudent = true;
+            
+            // Process rows in sorted order and add separator rows
+            rows.forEach(row => {
+                var id = row.cells[0].textContent;
+                var failureCount = idCounts[id];
+                var riskLevelCell = row.cells[8]; // Risk level column (now index 8 after adding Instructor column)
+                
+                // Set risk level text for every row
+                if (failureCount > 1) {
+                    row.setAttribute('data-risk', 'at-risk');
+                    riskLevelCell.textContent = 'High (' + failureCount + ' courses)';
+                    
+                    // Assign static color class based on ID
+                    var colorClass = 'group-color-' + idColorMap[id];
+                    row.classList.add(colorClass);
+                } else {
+                    row.setAttribute('data-risk', 'single');
+                    riskLevelCell.textContent = 'Moderate (1 course)';
+                    // Add a class for single failure rows
+                    row.classList.add('single-failure');
+                }
+                
+                // Check if this is a new student ID (regardless of failure count)
+                if (id !== currentId) {
+                    // Add separator row if this isn't the first student
+                    if (!isFirstStudent) {
+                        var separatorRow = document.createElement('tr');
+                        separatorRow.className = 'separator-row';
+                        separatorRow.setAttribute('data-major', '');
+                        separatorRow.setAttribute('data-risk', '');
+                        
+                        // Create a cell that spans all columns
+                        var separatorCell = document.createElement('td');
+                        separatorCell.colSpan = 9;
+                        separatorCell.style.height = '20px';
+                        separatorCell.style.backgroundColor = '#e0e0e0';
+                        separatorCell.style.border = 'none';
+                        
+                        separatorRow.appendChild(separatorCell);
+                        groupedRows.push(separatorRow);
+                    }
+                    
+                    currentId = id;
+                    if (isFirstStudent) {
+                        isFirstStudent = false;
+                    }
+                }
+                
+                // Add the current row to our grouped array
+                groupedRows.push(row);
+            });
+            
+            // Clear and re-append grouped rows
+            var tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            groupedRows.forEach(row => {
+                tbody.appendChild(row);
+            });
+
+            // Update legend function (will be called initially and when filters change)
+            function updateLegend() {
+                var visibleRows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])')).filter(
+                    row => row.className !== 'separator-row'
+                );
+                
+                var visibleIds = new Set();
+                visibleRows.forEach(row => {
+                    var id = row.cells[0].textContent;
+                    if (idCounts[id] > 1) {
+                        visibleIds.add(id);
+                    }
+                });
+                
+                var legendHTML = '<h3>Students With Multiple Failures</h3>';
+                
+                if (visibleIds.size === 0) {
+                    legendHTML += '<p>No students with multiple failures found in current filter.</p>';
+                } else {
+                    visibleIds.forEach(id => {
+                        var colorClass = 'group-color-' + idColorMap[id];
+                        var studentName = '';
+                        
+                        // Find the first row with this ID to get the student name
+                        for (var i = 0; i < rows.length; i++) {
+                            if (rows[i].cells[0].textContent === id) {
+                                studentName = rows[i].cells[1].textContent;
+                                break;
+                            }
+                        }
+                        
+                        legendHTML += `<div class="legend-item ${colorClass}">
+                                        ID: ${id} - ${studentName} (${idCounts[id]} failures)
+                                       </div>`;
+                    });
+                }
+                
+                legend.innerHTML = legendHTML;
+            }
+            
+            // Initial legend update
+            updateLegend();
+
+            // Filter functionality
+            var majorFilter = document.getElementById('majorFilter');
+            var riskFilter = document.getElementById('riskFilter');
+            var resetBtn = document.getElementById('resetBtn');
+
+            function applyFilters() {
+                var selectedMajor = majorFilter.value;
+                var selectedRisk = riskFilter.value;
+                
+                // Get all rows including separators
+                var allRows = Array.from(tbody.getElementsByTagName('tr'));
+                
+                // First pass: determine which IDs to show based on filters
+                var visibleIds = new Set();
+                var idToShowMap = {};
+                
+                allRows.forEach(row => {
+                    // Skip separator rows
+                    if (row.className === 'separator-row') return;
+                    
+                    var id = row.cells[0].textContent;
+                    var major = row.getAttribute('data-major');
+                    var risk = row.getAttribute('data-risk');
+                    
+                    var majorMatch = selectedMajor === '' || major === selectedMajor;
+                    var riskMatch = selectedRisk === '' || risk === selectedRisk;
+                    
+                    if (majorMatch && riskMatch) {
+                        visibleIds.add(id);
+                        idToShowMap[id] = true;
+                    }
+                });
+                
+                // Second pass: handle visibility including separator rows
+                var currentId = null;
+                var isGroup = false;
+                var visibleInGroup = false;
+                
+                allRows.forEach(row => {
+                    // For separator rows
+                    if (row.className === 'separator-row') {
+                        // Show separator only if previous group had visible rows and next group will have visible rows
+                        row.style.display = visibleInGroup ? '' : 'none';
+                        visibleInGroup = false; // Reset for next group
+                        return;
+                    }
+                    
+                    var id = row.cells[0].textContent;
+                    var major = row.getAttribute('data-major');
+                    var risk = row.getAttribute('data-risk');
+                    
+                    var majorMatch = selectedMajor === '' || major === selectedMajor;
+                    var riskMatch = selectedRisk === '' || risk === selectedRisk;
+                    
+                    // If this is a multi-failure student, we show all their rows if any match the filter
+                    if (idCounts[id] > 1) {
+                        row.style.display = idToShowMap[id] ? '' : 'none';
+                        if (idToShowMap[id]) visibleInGroup = true;
+                    } else {
+                        // For single failure students, apply filters directly
+                        row.style.display = (majorMatch && riskMatch) ? '' : 'none';
+                        if ((majorMatch && riskMatch)) visibleInGroup = true;
+                    }
+                    
+                    currentId = id;
+                });
+                
+                // Update the legend to show only currently visible students
+                updateLegend();
+            }
+
+            majorFilter.addEventListener('change', applyFilters);
+            riskFilter.addEventListener('change', applyFilters);
+            
+            resetBtn.addEventListener('click', function() {
+                majorFilter.value = '';
+                riskFilter.value = '';
+                applyFilters();
+            });
+        };
+    </script>
+</body>
+</html>

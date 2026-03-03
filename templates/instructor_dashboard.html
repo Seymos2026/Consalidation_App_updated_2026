@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instructor Dashboard - Student Grade Analysis System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .page-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: white;
+        }
+        .page-header .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .page-header .btn {
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .page-header .btn-logout {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .page-header .btn-logout:hover {
+            background-color: #c0392b;
+        }
+        .page-header .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .page-header .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .main-container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+
+        .instruction-box {
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .instruction-box h3 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+
+        .instruction-box ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instruction-box li {
+            margin: 8px 0;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .form-group h2 {
+            margin-top: 0;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .file-name {
+            margin-left: 10px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .status-message {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .special-grades-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .special-grades-box strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h1>Instructor Dashboard</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('change_password') }}" class="btn btn-primary">Change Password</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+    </div>
+</div>
+
+<div class="main-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="status-message status-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="instruction-box">
+        <h3>Welcome, {{ session.full_name or session.username }}!</h3>
+        <p>Please follow these steps to submit your grades:</p>
+        <ol>
+            <li><strong>Download the template</strong> using the button below</li>
+            <li><strong>Fill in the template</strong> with your student grades (ID, Name, Course, Grade)</li>
+            <li><strong>Upload the completed file</strong> - the system will automatically merge it with student information (Major, Status, Advisor)</li>
+        </ol>
+        
+        <div class="special-grades-box">
+            <strong>Special Grades:</strong><br>
+            • <strong>-1</strong> = Incomplete<br>
+            • <strong>-2</strong> = FNA (Failure to Attend)
+        </div>
+    </div>
+
+    <div class="form-group">
+        <h2>Step 1: Download Template</h2>
+        <p>Download the Excel template file to fill in your student grades.</p>
+        <a href="{{ url_for('download_template') }}" class="btn btn-success">Download Template</a>
+    </div>
+
+    <div class="form-group">
+        <h2>Step 2: Upload Your Grades</h2>
+        <p>Upload your completed grade file. The system will automatically add Major, Status, and Advisor information.</p>
+        
+        <div class="special-grades-box" style="margin-bottom: 15px;">
+            <strong>Important - Filename Format Required:</strong><br>
+            Your filename MUST follow this format:<br>
+            <code style="background-color: #fff; padding: 5px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+                CourseCode_CourseName_InstructorName.xlsx
+            </code><br><br>
+            <strong>Example:</strong> <code style="background-color: #fff; padding: 3px; border-radius: 3px;">BCS201_LogicForComputerScience_DrHamza.xlsx</code><br><br>
+            <strong>Format Rules:</strong><br>
+            • CourseCode: Letters and numbers (e.g., BCS201, ENG102)<br>
+            • CourseName: Course name with underscores (e.g., LogicForComputerScience)<br>
+            • InstructorName: Your name (e.g., DrHamza, MehakKhurana)<br>
+            • Use underscores (_) to separate each part<br>
+            • Do NOT use spaces in the filename
+        </div>
+        
+        <form method="POST" action="{{ url_for('instructor_upload') }}" enctype="multipart/form-data">
+            <div class="file-input-wrapper">
+                <span class="file-input-button">Choose File</span>
+                <input type="file" name="file" id="fileInput" accept=".xlsx, .xls, .csv" required>
+                <span class="file-name" id="fileName">No file selected</span>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload & Submit</button>
+        </form>
+    </div>
+
+    <div class="status-info">
+        <strong>Note:</strong> Your uploaded file will be automatically merged with the master student database to include Major, Status, and Advisor information. The admin will be notified of your submission.
+    </div>
+
+</div>
+
+<script>
+document.getElementById('fileInput').addEventListener('change', function() {
+    const fileName = this.files[0] ? this.files[0].name : 'No file selected';
+    document.getElementById('fileName').textContent = fileName;
+});
+</script>
+
+</body>
+</html>

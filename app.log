@@ -1,0 +1,7 @@
+Folder found at: /Users/ahmedseyam/Desktop/APP_Updates_Final_2026_Updated/uploads
+Folder found at: /Users/ahmedseyam/Desktop/APP_Updates_Final_2026_Updated/master_files
+Folder found at: /Users/ahmedseyam/Desktop/APP_Updates_Final_2026_Updated/templates_files
+ * Serving Flask app 'app'
+ * Debug mode: on
+Address already in use
+Port 6001 is in use by another program. Either identify and stop that program, or start the server with a different port.

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Accounts - Admin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .page-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: white;
+        }
+        .page-header .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .page-header .btn {
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .page-header .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .page-header .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .accounts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .accounts-table th,
+        .accounts-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .accounts-table th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+
+        .accounts-table tr:hover {
+            background-color: #f2f2f2;
+        }
+
+        .accounts-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-changed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-not-changed {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h1>Manage Instructor Accounts</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="main-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="status-message status-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="warning-box">
+        <strong>⚠️ Warning:</strong> Deleting an account will permanently remove the instructor and all their submission records. This action cannot be undone.
+    </div>
+
+    {% if instructors %}
+    <table class="accounts-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Full Name</th>
+                <th>Password Status</th>
+                <th>Submissions</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for instructor in instructors %}
+            <tr>
+                <td>{{ instructor.username }}</td>
+                <td>{{ instructor.full_name or 'N/A' }}</td>
+                <td>
+                    {% if instructor.password_changed %}
+                    <span class="status-badge status-changed">Changed</span>
+                    {% else %}
+                    <span class="status-badge status-not-changed">Default</span>
+                    {% endif %}
+                </td>
+                <td>{{ instructor.submission_count }}</td>
+                <td>{{ instructor.created_at }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_account', user_id=instructor.id) }}" 
+                          onsubmit="return confirm('Are you sure you want to delete the account for {{ instructor.username }}? This will also delete all their submissions. This action cannot be undone!');" 
+                          style="display: inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="status-info">
+        <p>No instructor accounts found.</p>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

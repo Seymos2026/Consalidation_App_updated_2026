@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View All Borderline Students - Admin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .page-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: white;
+        }
+        .page-header .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .page-header .btn {
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .page-header .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .page-header .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        .info-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box strong {
+            color: #856404;
+        }
+
+        .borders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .borders-table th,
+        .borders-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .borders-table th {
+            background-color: #f39c12;
+            color: white;
+            font-weight: 600;
+        }
+
+        .borders-table tr:hover {
+            background-color: #fff3cd;
+        }
+
+        .borders-table tr:nth-child(even) {
+            background-color: #fef9e7;
+        }
+
+        .highlight-borderline {
+            background-color: #fff3cd !important;
+            color: #856404 !important;
+        }
+
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h1>View All Borderline Students</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="info-box">
+        <strong>Borderline Grades:</strong> 54, 59, 64, 69, 74, 79, 88, 89<br>
+        These are students with grades that may need special attention or review.
+    </div>
+
+    {% if borderline_students %}
+    <h2>All Borderline Students Across All Courses ({{ borderline_students|length }} found)</h2>
+    <table class="borders-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Grade</th>
+                <th>Major</th>
+                <th>Status</th>
+                <th>Advisor</th>
+                <th>Instructor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in borderline_students %}
+            <tr class="highlight-borderline">
+                <td>{{ student.get('ID', 'N/A') }}</td>
+                <td>{{ student.get('Name', 'N/A') }}</td>
+                <td>{{ student.get('course', 'N/A') }}</td>
+                <td><strong>{{ student.get('Grade', 'N/A') }}</strong></td>
+                <td>{{ student.get('Major', 'N/A') }}</td>
+                <td>{{ student.get('Status', 'N/A') }}</td>
+                <td>{{ student.get('Advisor', 'N/A') }}</td>
+                <td>{{ student.get('Instructor', 'N/A') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="status-info">
+        <p>No borderline students found across all courses.</p>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
