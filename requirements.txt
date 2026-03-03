@@ -1,14 +1,14 @@
-echo "Flask==3.0.0" > requirements.txt
-echo "flask-cors==6.0.1" >> requirements.txt
-echo "Flask-Login==0.6.3" >> requirements.txt
-echo "Flask-SQLAlchemy==3.1.1" >> requirements.txt
-echo "Werkzeug==3.0.1" >> requirements.txt
-echo "gunicorn==21.2.0" >> requirements.txt
-echo "python-dotenv==1.1.1" >> requirements.txt
-echo "SQLAlchemy==2.0.23" >> requirements.txt
-echo "psycopg2-binary==2.9.9" >> requirements.txt
-echo "pandas" >> requirements.txt
-echo "numpy" >> requirements.txt
-echo "openpyxl" >> requirements.txt
-echo "requests" >> requirements.txt
-echo "Pillow" >> requirements.txt
+Flask==3.0.0
+flask-cors==6.0.1
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.1
+gunicorn==21.2.0
+python-dotenv==1.1.1
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.9
+pandas
+numpy
+openpyxl
+requests
+Pillow
