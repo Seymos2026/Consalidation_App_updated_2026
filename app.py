@@ -25,48 +25,123 @@ for folder in [app.config['UPLOAD_FOLDER'], app.config['MASTER_FILE_FOLDER'], ap
 #app.secret_key = 'heremysecretkey2023_strong_and_random'
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 
-# Database initialization
+
+def _normalized_database_url():
+    """Render provides postgres://...; psycopg2 expects postgresql://."""
+    url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not url:
+        return None
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+    return url
+
+
+USE_POSTGRES = bool(_normalized_database_url())
+
+
+class _DbConn:
+    """Wraps SQLite or PostgreSQL so routes can use conn.execute(...).fetchone()."""
+
+    def __init__(self, raw_conn, is_postgres):
+        self._conn = raw_conn
+        self._is_postgres = is_postgres
+
+    def execute(self, sql, params=None):
+        if self._is_postgres:
+            sql = sql.replace("?", "%s")
+        if self._is_postgres:
+            cur = self._conn.cursor()
+            if params is not None:
+                cur.execute(sql, params)
+            else:
+                cur.execute(sql)
+            return cur
+        if params is not None:
+            return self._conn.execute(sql, params)
+        return self._conn.execute(sql)
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
+
+def get_db():
+    if USE_POSTGRES:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        raw = psycopg2.connect(_normalized_database_url(), cursor_factory=RealDictCursor)
+        return _DbConn(raw, True)
+    raw = sqlite3.connect("app.db")
+    raw.row_factory = sqlite3.Row
+    return _DbConn(raw, False)
+
+
 def init_db():
-    conn = sqlite3.connect('app.db')
-    c = conn.cursor()
-    
-    # Users table
-    c.execute('''CREATE TABLE IF NOT EXISTS users
+    conn = get_db()
+    if USE_POSTGRES:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL,
+            full_name TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            password_changed BOOLEAN DEFAULT FALSE)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS submissions (
+            id SERIAL PRIMARY KEY,
+            instructor_id INTEGER NOT NULL REFERENCES users(id),
+            filename TEXT NOT NULL,
+            course_name TEXT,
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"""
+        )
+    else:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   username TEXT UNIQUE NOT NULL,
                   password_hash TEXT NOT NULL,
                   role TEXT NOT NULL,
                   full_name TEXT,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  password_changed BOOLEAN DEFAULT 0)''')
-    
-    # Submissions table to track instructor uploads
-    c.execute('''CREATE TABLE IF NOT EXISTS submissions
+                  password_changed BOOLEAN DEFAULT 0)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS submissions
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   instructor_id INTEGER NOT NULL,
                   filename TEXT NOT NULL,
                   course_name TEXT,
                   submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (instructor_id) REFERENCES users(id))''')
-    
-    # Check if admin user exists, if not create default admin
-    c.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
-    if c.fetchone()[0] == 0:
-        default_admin_password = generate_password_hash('admin@2025', method='pbkdf2:sha256')
-        c.execute("INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)",
-                  ('cecs@cud.ac.ae', default_admin_password, 'admin', 'Admin User'))
+                  FOREIGN KEY (instructor_id) REFERENCES users(id))"""
+        )
+
+    row = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM users WHERE role = 'admin'"
+    ).fetchone()
+    if row["cnt"] == 0:
+        default_admin_password = generate_password_hash("admin@2025", method="pbkdf2:sha256")
+        conn.execute(
+            "INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)",
+            ("cecs@cud.ac.ae", default_admin_password, "admin", "Admin User"),
+        )
         print("Created default admin user: cecs@cud.ac.ae / admin@2025")
-    
+
     conn.commit()
     conn.close()
+
 
 init_db()
 
 # --- Helper Functions ---
-def get_db():
-    conn = sqlite3.connect('app.db')
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def get_professor_and_course_from_filename(filename_with_ext):
     """Parses filename assuming format: CourseCode_CourseName_ProfessorName.ext"""
@@ -377,7 +452,7 @@ def change_password():
         
         if user and check_password_hash(user['password_hash'], current_password):
             new_password_hash = generate_password_hash(new_password, method='pbkdf2:sha256')
-            conn.execute('UPDATE users SET password_hash = ?, password_changed = 1 WHERE id = ?',
+            conn.execute('UPDATE users SET password_hash = ?, password_changed = TRUE WHERE id = ?',
                         (new_password_hash, session['user_id']))
             conn.commit()
             conn.close()
@@ -429,8 +504,10 @@ def admin_dashboard():
     for instructor in instructors:
         has_submitted = instructor['id'] in submitted_instructor_ids
         # Get submission count for this instructor
-        sub_count = conn.execute('SELECT COUNT(*) FROM submissions WHERE instructor_id = ?', 
-                                (instructor['id'],)).fetchone()[0]
+        sub_count = conn.execute(
+            'SELECT COUNT(*) AS cnt FROM submissions WHERE instructor_id = ?',
+            (instructor['id'],),
+        ).fetchone()['cnt']
         instructor_status.append({
             'id': instructor['id'],
             'username': instructor['username'],
@@ -502,8 +579,10 @@ def manage_accounts():
     # Get submission count for each instructor
     instructor_list = []
     for instructor in instructors:
-        sub_count = conn.execute('SELECT COUNT(*) FROM submissions WHERE instructor_id = ?', 
-                                (instructor['id'],)).fetchone()[0]
+        sub_count = conn.execute(
+            'SELECT COUNT(*) AS cnt FROM submissions WHERE instructor_id = ?',
+            (instructor['id'],),
+        ).fetchone()['cnt']
         instructor_list.append({
             'id': instructor['id'],
             'username': instructor['username'],
@@ -1036,8 +1115,10 @@ def view_all_submissions():
     instructor_status = []
     for instructor in instructors:
         has_submitted = instructor['id'] in submitted_instructor_ids
-        sub_count = conn.execute('SELECT COUNT(*) FROM submissions WHERE instructor_id = ?', 
-                                (instructor['id'],)).fetchone()[0]
+        sub_count = conn.execute(
+            'SELECT COUNT(*) AS cnt FROM submissions WHERE instructor_id = ?',
+            (instructor['id'],),
+        ).fetchone()['cnt']
         instructor_status.append({
             'id': instructor['id'],
             'username': instructor['username'],
